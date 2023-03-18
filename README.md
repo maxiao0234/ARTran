@@ -15,6 +15,7 @@ python -m torch.distributed.launch --nproc_per_node=2 --use_env train.py --fold=
 
 
 ## Inferencing
+During the inferencing phase, the screening results can be predicted interactively for a given condition (shift).
 ```
 # An example for inferencing:
 python test.py --shift=0. --fold=1 --batch-size=100 --num-classes=2 --hw-shape=(224, 224) --kernel-size=(56, 8) --stride=(28, 8) --dataroot='' --resume=''
