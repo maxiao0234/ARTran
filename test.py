@@ -1,35 +1,13 @@
 import argparse
-import datetime
 import numpy as np
-import time
 import torch
 import torch.backends.cudnn as cudnn
-import json
-
-from pathlib import Path
-
-from timm.data import Mixup
-from timm.models import create_model
-from timm.loss import LabelSmoothingCrossEntropy, SoftTargetCrossEntropy
-from timm.scheduler import create_scheduler
-from timm.optim import create_optimizer
-from timm.utils import NativeScaler, get_state_dict, ModelEma, accuracy
-
-from datasets import build_dataset
-from engine import train_one_epoch, evaluate, test, test_uncertainty_posteriors
-from losses import DistillationLoss
-from samplers import RASampler
-# from augment import new_data_aug_generator
+from timm.utils import accuracy
+import utils
+import random
 
 import models
 import read_HM
-
-import utils
-import yaml
-import os
-
-import random
-from loguru import logger
 
 
 def get_args_parser():
@@ -138,6 +116,7 @@ def main(args):
     count_positive = 0
     count_negative = 0
     positive_label = torch.ones(100).to(device)
+    threshold = 50
     with torch.no_grad():
         for samples in data_loader_val:
             image = samples['image'].to(device, non_blocking=True)
@@ -151,8 +130,12 @@ def main(args):
             pred_positive_shift = accuracy(outputs['post_clean_shift'], positive_label)[0]
             uncertainty_post = - outputs['post_clean_shift'] * torch.log(outputs['post_clean_shift'])
             uncertainty_post = torch.mean(torch.sum(uncertainty_post, dim=-1))
-            uncertainty_frame = - (pred_positive_shift / 100) * torch.log((pred_positive_shift + 1) / 101)
-            uncertainty_frame += - ((100 - pred_positive_shift) / 100) * torch.log((101 - pred_positive_shift) / 101)
+            if pred_positive_shift == 0:
+                uncertainty_frame = 0
+            else:
+                uncertainty_frame = - (pred_positive_shift / 100) * torch.log(pred_positive_shift / 100)
+                uncertainty_frame -= ((100 - pred_positive_shift) / 100) * torch.log((100 - pred_positive_shift) / 100)
+
             uncertainty_adjustment_list = []
             for shift_i in [0, -0.1, 0.1, -0.2, 0.2, -0.3, 0.3]:
                 shift_uncertainty = torch.ones_like(shift).to(image.device) * shift_i
@@ -165,54 +148,32 @@ def main(args):
 
             if clsSEBaseline == 1:
                 count_positive += 1
-                if pred_positive_noise_shift > threshold:
-                    true_positive_noise += 1
-                else:
-                    false_negative_noise += 1
-                if pred_positive_clean_shift > threshold:
-                    true_positive_clean += 1
-                    uncertainty_list_post['TP'].append(uncertainty_post)
-                    uncertainty_list_adj['TP'].append(uncertainty_adjustment)
-                    uncertainty_list_frame['TP'].append(uncertainty_frame)
+                if pred_positive_shift > threshold:
+                    true_positive += 1
                     flag = 'TP'
                 else:
-                    false_negative_clean += 1
-                    uncertainty_list_post['FN'].append(uncertainty_post)
-                    uncertainty_list_adj['FN'].append(uncertainty_adjustment)
-                    uncertainty_list_frame['FN'].append(uncertainty_frame)
+                    false_negative += 1
                     flag = 'FN'
             else:
                 count_negative += 1
-                if pred_positive_noise_shift > threshold:
-                    false_positive_noise += 1
-                else:
-                    true_negative_noise += 1
-                if pred_positive_clean_shift > threshold:
-                    false_positive_clean += 1
-                    uncertainty_list_post['FP'].append(uncertainty_post)
-                    uncertainty_list_adj['FP'].append(uncertainty_adjustment)
-                    uncertainty_list_frame['FP'].append(uncertainty_frame)
+                if pred_positive_shift > threshold:
+                    false_positive += 1
                     flag = 'FP'
                 else:
-                    true_negative_clean += 1
-                    uncertainty_list_post['TN'].append(uncertainty_post)
-                    uncertainty_list_adj['TN'].append(uncertainty_adjustment)
-                    uncertainty_list_frame['TN'].append(uncertainty_frame)
+                    true_negative += 1
                     flag = 'TN'
 
+            print(f'Flag: {flag}, ID: {cube_id}, Post: {uncertainty_post:.7f}, Adjustment: {uncertainty_adjustment:.7f}, Frame: {uncertainty_frame:>5}')
+
+    accuracy_ = (true_positive + true_negative) / (true_positive + true_negative + false_positive + false_negative)
+    precision_ = true_positive / (true_positive + false_positive)
+    recall_ = true_positive / (true_positive + false_negative)
+    print(f'Accuracy: {accuracy_}')
+    print(f'Precision: {precision_}')
+    print(f'Recall: {recall_}')
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser('DeiT training and evaluation script', parents=[get_args_parser()])
+    parser = argparse.ArgumentParser('ARTran evaluation script', parents=[get_args_parser()])
     args = parser.parse_args()
-
-    args = merge_cfg.merge_args_from_yaml(args, parser, args.config)
-
-    if not args.eval:
-        merge_cfg.save_config(args, parser)
-
-        trace = logger.add(os.path.join(args.output_dir, 'logs.log'))
-        main(args)
-        logger.remove(trace)
-    else:
-        main(args)
+    main(args)
