@@ -7,11 +7,17 @@ coefficient.
 
 
 ## Training
-- TO DO
+```
+# An example for training on 2 GPUs:
+python -m torch.distributed.launch --nproc_per_node=2 --use_env train.py --fold=1 --num-classes=2 --hw-shape=224,224 --kernel-size=56,8 --stride=28,8 --dataroot='' --output-dir=''
+```
 
 
 ## Inferencing
-- TO DO
+```
+# An example for inferencing:
+python test.py --fold=1 --num-classes=2 --hw-shape=(224, 224) --kernel-size=(56, 8) --stride=(28, 8) --dataroot='' --resume=''
+```
 
 
 ## Citing
