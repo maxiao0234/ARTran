@@ -1,5 +1,8 @@
-# Adjustable Robust Transformer for High Myopia Screening in Optical Coherence Tomography
+# Adjustable Robust Transformer (ARTran)
 
+This is the official repository for "Adjustable Robust Transformer for High Myopia Screening in Optical Coherence Tomography" (MICCAI 2023)
+
+## Introduction
 Adjustable Robust Transformer (ARTran) is a method for high myopia screening. It can change the preference of the inference result according to the provided adjustment
 coefficient. We aim to design a high myopia screening method which use a unified model to make different decisions based on different inclusion criteria. We design a label noise learning method shifted subspace transition matrix (SST) to constrain the noisy class-posterior preferences. We have established the association between output preference and adjustment direction that a higher SE as inclusion criteria biases network output more towards positive categories.
 
