@@ -26,4 +26,14 @@ python test.py --shift=0. --fold=1 --batch-size=100 --num-classes=2 --hw-shape=(
 
 
 ## Citing
-- TO DO
+If this project is help for you, please cite it.
+```
+@inproceedings{ma2023adjustable,
+  title={Adjustable Robust Transformer for High Myopia Screening in Optical Coherence Tomography},
+  author={Ma, Xiao and Zhang, Zetian and Ji, Zexuan and Huang, Kun and Su, Na and Yuan, Songtao and Chen, Qiang},
+  booktitle={International Conference on Medical Image Computing and Computer-Assisted Intervention},
+  pages={504--514},
+  year={2023},
+  organization={Springer}
+}
+```
